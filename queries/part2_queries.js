@@ -113,3 +113,24 @@ db.tracks.aggregate([
   },
   { $match: { "outlier_tracks.0": { $exists: true } } }
 ]).forEach(printjson);
+
+// Завдання 4: Треки для фонової роботи
+print("\n=== Task 4: Background Work Tracks ===");
+
+db.tracks.find(
+  {
+    "audio_features.loudness": { $lt: -10 },
+    "audio_features.speechiness": { $lt: 0.1 },
+    "audio_features.instrumentalness": { $gt: 0.5 },
+    explicit: false
+  },
+  {
+    _id: 0,
+    track_name: 1,
+    artists: 1,
+    popularity: 1,
+    "audio_features.loudness": 1,
+    "audio_features.speechiness": 1,
+    "audio_features.instrumentalness": 1
+  }
+).limit(20).forEach(printjson);
