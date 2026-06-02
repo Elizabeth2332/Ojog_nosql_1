@@ -82,3 +82,30 @@ db.tracks.aggregate([
   },
   { $sort: { count: -1 } }
 ]).forEach(printjson);
+
+// Завдання 3. Найбільш «танцювальний» жанр
+print("\n=== Part 3 Task 3: Most Danceable Genre ===");
+
+db.tracks.aggregate([
+  {
+    $group: {
+      _id: "$track_genre",
+      avg_danceability: { $avg: "$audio_features.danceability" },
+      avg_energy: { $avg: "$audio_features.energy" },
+      avg_valence: { $avg: "$audio_features.valence" },
+      count: { $sum: 1 }
+    }
+  },
+  { $match: { count: { $gte: 100 } } },
+  {
+    $project: {
+      _id: 0,
+      genre: "$_id",
+      avg_danceability: { $round: ["$avg_danceability", 3] },
+      avg_energy: { $round: ["$avg_energy", 3] },
+      avg_valence: { $round: ["$avg_valence", 3] },
+      count: 1
+    }
+  },
+  { $sort: { avg_danceability: -1 } }
+]).forEach(printjson);
