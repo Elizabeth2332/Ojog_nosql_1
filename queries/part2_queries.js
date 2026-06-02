@@ -54,3 +54,62 @@ db.tracks.aggregate([
   { $sort: { avg_popularity: -1 } },
   { $limit: 20 }
 ]).forEach(printjson);
+
+// Завдання 3. Нетипові треки
+print("\n=== Task 3: Unusual Tracks by Tempo ===");
+
+db.tracks.aggregate([
+  {
+    $group: {
+      _id: "$track_genre",
+      avg_tempo: { $avg: "$audio_features.tempo" },
+      stddev_tempo: { $stdDevPop: "$audio_features.tempo" },
+      tracks: { $push: "$$ROOT" }
+    }
+  },
+  {
+    $addFields: {
+      outlier_threshold: {
+        $add: ["$avg_tempo", { $multiply: ["$stddev_tempo", 2] }]
+      }
+    }
+  },
+  {
+    $project: {
+      _id: 0,
+      genre: "$_id",
+      avg_tempo: { $round: ["$avg_tempo", 1] },
+      outlier_threshold: { $round: ["$outlier_threshold", 1] },
+      outlier_tracks: {
+        $filter: {
+          input: "$tracks",
+          as: "track",
+          cond: {
+            $gt: ["$$track.audio_features.tempo", "$outlier_threshold"]
+          }
+        }
+      }
+    }
+  },
+  {
+    $project: {
+      genre: 1,
+      avg_tempo: 1,
+      outlier_threshold: 1,
+      outlier_tracks: {
+        $map: {
+          input: "$outlier_tracks",
+          as: "t",
+          in: {
+            _id: "$$t._id",
+            track_name: "$$t.track_name",
+            popularity: "$$t.popularity",
+            artists: "$$t.artists",
+            audio_features: { tempo: "$$t.audio_features.tempo" }
+          }
+        }
+      }
+    }
+  },
+  { $match: { "outlier_tracks.0": { $exists: true } } }
+]).forEach(printjson);
